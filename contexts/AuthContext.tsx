@@ -25,21 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initial session and user fetch
   useEffect(() => {
-    // For testing purposes: Create a mock user to bypass authentication
-    const mockUser: User = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      profile: {
-        id: 'test-user-id',
-        display_name: 'Test User',
-        avatar_url: null,
-        bio: 'This is a test user for development',
-        preferences: {},
-      }
-    };
-
-    // Comment this section for testing with mock user
-    /*
+    // Real authentication implementation
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -63,12 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-    */
-
-    // For testing: Set mock user and session
-    setUser(mockUser);
-    setLoading(false);
-    
   }, []);
 
   const fetchUser = async () => {

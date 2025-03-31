@@ -8,7 +8,7 @@ export interface Card {
   title: string;
   description?: string;
   source_url?: string;
-  source_type: 'youtube' | 'blog' | 'custom' | 'image' | 'instagram' | 'tiktok' | 'article';
+  source_type: 'youtube' | 'blog' | 'custom' | 'image' | 'instagram' | 'tiktok' | 'article' | 'web';
   thumbnail_url?: string;
   media_url?: string;
   startTime?: number; // in seconds, for segment selection
@@ -32,6 +32,6 @@ export interface Cue {
   text?: string;
   instructions?: string;
   timestamp?: number; // in seconds
-  type?: 'form' | 'breathing' | 'tempo' | 'focus' | 'other';
+  type?: 'form' | 'breathing' | 'tempo' | 'focus' | 'other' | 'intensity' | 'general';
   created_at?: Date;
 }

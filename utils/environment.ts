@@ -15,6 +15,12 @@ interface Environment {
   API_URL: string;
   STORAGE_URL: string;
   ENV: 'development' | 'production' | 'test';
+  NODE_ENV: 'development' | 'production' | 'test';
+  AGENT_API_URL: string;
+  ENABLE_MOCK_DATA: string;
+  YOUTUBE_API_KEY?: string;
+  TIKTOK_API_KEY?: string;
+  INSTAGRAM_API_KEY?: string;
 }
 
 // Get environment variables from Expo Constants
@@ -35,6 +41,12 @@ export const getEnvironment = (): Environment => {
       API_URL: process.env.API_URL || expoConstants.API_URL || 'http://localhost:3000',
       STORAGE_URL: process.env.STORAGE_URL || expoConstants.STORAGE_URL || `${DEV_SUPABASE_URL}/storage/v1`,
       ENV: 'development',
+      NODE_ENV: 'development',
+      AGENT_API_URL: process.env.AGENT_API_URL || expoConstants.AGENT_API_URL || 'http://localhost:3001/agent',
+      ENABLE_MOCK_DATA: process.env.ENABLE_MOCK_DATA || expoConstants.ENABLE_MOCK_DATA || 'true',
+      YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || expoConstants.YOUTUBE_API_KEY,
+      TIKTOK_API_KEY: process.env.TIKTOK_API_KEY || expoConstants.TIKTOK_API_KEY,
+      INSTAGRAM_API_KEY: process.env.INSTAGRAM_API_KEY || expoConstants.INSTAGRAM_API_KEY,
     };
   }
 
@@ -45,6 +57,12 @@ export const getEnvironment = (): Environment => {
     API_URL: expoConstants.API_URL || 'https://api.solsticeapp.com',
     STORAGE_URL: expoConstants.STORAGE_URL || `${DEV_SUPABASE_URL}/storage/v1`,
     ENV: 'production',
+    NODE_ENV: 'production',
+    AGENT_API_URL: expoConstants.AGENT_API_URL || 'https://api.solsticeapp.com/agent',
+    ENABLE_MOCK_DATA: expoConstants.ENABLE_MOCK_DATA || 'false',
+    YOUTUBE_API_KEY: expoConstants.YOUTUBE_API_KEY,
+    TIKTOK_API_KEY: expoConstants.TIKTOK_API_KEY,
+    INSTAGRAM_API_KEY: expoConstants.INSTAGRAM_API_KEY,
   };
 };
 

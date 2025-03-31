@@ -2,7 +2,7 @@
  * BuilderScreen Component
  * Main screen for building routines by importing and organizing cards
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -21,27 +21,69 @@ import DraggableFlatList, {
   ScaleDecorator
 } from 'react-native-draggable-flatlist';
 import ContentCard from '../../components/Card/ContentCard';
-import { useRoutine } from '../../context/RoutineContext';
+import CardEditorModal from '../../components/Card/CardEditorModal';
+import { useRoutines } from '../../context/RoutineContext';
 import { intakeAgent } from '../../services/agentService';
 import { Card } from '../../types/card';
 import * as Colors from '../../constants/colors';
+import { handleError, ErrorType, tryCatch } from '../../utils/errorHandling';
+import { useAuth } from '../../contexts/AuthContext';
+import { saveContent } from '../../services/contentService';
 
 const BuilderScreen = ({ navigation }: any) => {
   // Local state
   const [url, setUrl] = useState('');
   const inputRef = useRef<TextInput>(null);
+  const [editingCard, setEditingCard] = useState<Card | null>(null);
+  const [showCardEditor, setShowCardEditor] = useState(false);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [processingUrl, setProcessingUrl] = useState<string | null>(null);
   
   // Global routine state from context
   const { 
-    cards, 
-    addCards, 
-    reorderCards, 
-    isLoading, 
-    setIsLoading,
-    processingUrl,
-    setProcessingUrl,
-    removeCard
-  } = useRoutine();
+    activeRoutine,
+    saveRoutine
+  } = useRoutines();
+
+  // Get user from auth context
+  const { user } = useAuth();
+
+  // Load cards from active routine if available
+  useEffect(() => {
+    if (activeRoutine && activeRoutine.cards) {
+      setCards(activeRoutine.cards);
+    }
+  }, [activeRoutine]);
+
+  // Add cards to the routine
+  const addCards = (newCards: Card[]) => {
+    setCards(prevCards => [...prevCards, ...newCards]);
+  };
+
+  // Update a card in the routine
+  const updateCard = (updatedCard: Card) => {
+    setCards(prevCards => 
+      prevCards.map(card => 
+        card.id === updatedCard.id ? updatedCard : card
+      )
+    );
+  };
+
+  // Remove a card from the routine
+  const removeCard = (cardId: string) => {
+    setCards(prevCards => prevCards.filter(card => card.id !== cardId));
+  };
+
+  // Reorder cards in the routine
+  const reorderCards = (fromIndex: number, toIndex: number) => {
+    setCards(prevCards => {
+      const result = [...prevCards];
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    });
+  };
 
   // Handle URL import
   const handleImport = async () => {
@@ -54,7 +96,10 @@ const BuilderScreen = ({ navigation }: any) => {
     try {
       new URL(url);
     } catch (e) {
-      Alert.alert('Invalid URL', 'Please enter a valid URL including http:// or https://');
+      handleError('Invalid URL. Please enter a valid URL including http:// or https://', {
+        type: ErrorType.VALIDATION,
+        showAlert: true
+      });
       return;
     }
     
@@ -63,6 +108,16 @@ const BuilderScreen = ({ navigation }: any) => {
     setProcessingUrl(url);
     
     try {
+      // First save the content to the user's library
+      if (user) {
+        await saveContent({
+          platform: detectPlatform(url),
+          url: url,
+          userId: user.id,
+          timestampSaved: new Date().toISOString()
+        });
+      }
+      
       // Call intake agent to parse URL into cards
       const importedCards = await intakeAgent(url);
       
@@ -86,11 +141,11 @@ const BuilderScreen = ({ navigation }: any) => {
         );
       }
     } catch (error) {
-      console.error('Import error:', error);
-      Alert.alert(
-        'Import Failed', 
-        'There was an error importing content from this URL. Please try again.'
-      );
+      handleError(error, {
+        type: ErrorType.SERVER,
+        showAlert: true,
+        context: { url }
+      });
     } finally {
       // End loading
       setIsLoading(false);
@@ -98,10 +153,39 @@ const BuilderScreen = ({ navigation }: any) => {
     }
   };
 
+  // Detect platform from URL
+  const detectPlatform = (url: string): 'youtube' | 'instagram' | 'tiktok' | 'article' | 'web' => {
+    const urlLower = url.toLowerCase();
+    
+    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+      return 'youtube';
+    } else if (urlLower.includes('instagram.com')) {
+      return 'instagram';
+    } else if (urlLower.includes('tiktok.com')) {
+      return 'tiktok';
+    } else if (
+      urlLower.includes('medium.com') || 
+      urlLower.includes('blog.') || 
+      urlLower.includes('article') ||
+      urlLower.includes('.blog')
+    ) {
+      return 'article';
+    }
+    
+    return 'web';
+  };
+
   // Handle card edit
   const handleEditCard = (card: Card) => {
-    // Navigate to edit screen or show edit modal (to be implemented)
-    Alert.alert('Edit Card', `Editing card: ${card.title}`);
+    setEditingCard(card);
+    setShowCardEditor(true);
+  };
+  
+  // Handle saving edited card
+  const handleSaveCard = (updatedCard: Card) => {
+    updateCard(updatedCard);
+    setShowCardEditor(false);
+    setEditingCard(null);
   };
   
   // Handle card deletion
@@ -142,25 +226,45 @@ const BuilderScreen = ({ navigation }: any) => {
 
   // Handle drag end to update order
   const handleDragEnd = ({ data }: { data: Card[] }) => {
-    // Update the order of cards in the context
-    // This will be handled by reorderCards which has the logic to handle order changes
-    for (let i = 0; i < data.length; i++) {
-      const currentIndex = cards.findIndex(card => card.id === data[i].id);
-      if (currentIndex !== i) {
-        reorderCards(currentIndex, i);
-        break;
-      }
-    }
+    // Update the order of cards in the state
+    setCards(data);
   };
   
   // Continue to tag screen
-  const handleContinueToTag = () => {
+  const handleContinueToTag = async () => {
     if (cards.length === 0) {
       Alert.alert('No Cards', 'Please add some cards to your routine before continuing.');
       return;
     }
     
-    navigation.navigate('TagRoutine');
+    // Save the current routine before navigating
+    const result = await tryCatch(async () => {
+      const routineToSave = {
+        ...(activeRoutine || {}),
+        title: activeRoutine?.title || 'New Routine',
+        cards: cards,
+        user_id: user?.id,
+        updated_at: new Date()
+      };
+      
+      const savedRoutine = await saveRoutine(routineToSave);
+      
+      if (savedRoutine) {
+        navigation.navigate('TagRoutine', { routineId: savedRoutine.id });
+        return savedRoutine;
+      } else {
+        throw new Error('Failed to save routine');
+      }
+    }, {
+      type: ErrorType.SERVER,
+      showAlert: true,
+      context: { routineId: activeRoutine?.id }
+    });
+    
+    if (!result) {
+      // Error was already handled by tryCatch
+      console.log('Failed to continue to tag screen');
+    }
   };
   
   // Perform the routine
@@ -245,31 +349,38 @@ const BuilderScreen = ({ navigation }: any) => {
           />
         )}
         
-        {/* Bottom Action Bar (if needed) */}
-        {cards.length > 0 && (
-          <View style={styles.bottomBar}>
-            <Text style={styles.cardCount}>
-              {cards.length} {cards.length === 1 ? 'card' : 'cards'}
-            </Text>
-            
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.performButton]}
-                onPress={handlePerformRoutine}
-              >
-                <Text style={styles.actionButtonText}>Perform</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.tagButton]}
-                onPress={handleContinueToTag}
-              >
-                <Text style={styles.actionButtonText}>Continue</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        {/* Bottom Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.performButton]}
+            onPress={handlePerformRoutine}
+            disabled={cards.length === 0}
+          >
+            <Text style={styles.actionButtonText}>Perform</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.continueButton]}
+            onPress={handleContinueToTag}
+            disabled={cards.length === 0}
+          >
+            <Text style={styles.actionButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
+      
+      {/* Card Editor Modal */}
+      {editingCard && (
+        <CardEditorModal
+          visible={showCardEditor}
+          card={editingCard}
+          onSave={handleSaveCard}
+          onCancel={() => {
+            setShowCardEditor(false);
+            setEditingCard(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -283,113 +394,97 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.BORDER,
-    backgroundColor: Colors.WHITE,
+    borderBottomColor: Colors.BORDER_LIGHT,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.BLACK,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.TEXT_DARK,
   },
   backButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.BACKGROUND_LIGHT,
+    padding: 8,
   },
   backButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.GRAY_DARK,
+    color: Colors.PRIMARY,
+    fontSize: 16,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.WHITE,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.BORDER,
+    borderBottomColor: Colors.BORDER_LIGHT,
   },
   input: {
     flex: 1,
-    height: 46,
+    height: 48,
     borderWidth: 1,
-    borderColor: Colors.BORDER,
+    borderColor: Colors.BORDER_MEDIUM,
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 16,
-    backgroundColor: Colors.BACKGROUND_LIGHT,
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
   },
   importButton: {
-    marginLeft: 12,
-    height: 46,
-    paddingHorizontal: 16,
     backgroundColor: Colors.PRIMARY,
+    height: 48,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   importButtonDisabled: {
     backgroundColor: Colors.PRIMARY_LIGHT,
   },
   importButtonText: {
-    color: Colors.WHITE,
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    alignItems: 'center',
+    padding: 32,
   },
   emptyText: {
-    fontSize: 16,
-    color: Colors.GRAY,
     textAlign: 'center',
+    color: Colors.TEXT_MEDIUM,
+    fontSize: 16,
     lineHeight: 24,
   },
   listContent: {
-    paddingVertical: 8,
+    padding: 16,
+    paddingBottom: 100, // Extra space at bottom for action buttons
   },
-  bottomBar: {
+  actionButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
     borderTopWidth: 1,
-    borderTopColor: Colors.BORDER,
-    backgroundColor: Colors.WHITE,
-  },
-  cardCount: {
-    fontSize: 14,
-    color: Colors.GRAY_DARK,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
+    borderTopColor: Colors.BORDER_LIGHT,
+    backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   actionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    flex: 1,
+    height: 48,
     borderRadius: 8,
-    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
   },
   performButton: {
-    backgroundColor: Colors.ACCENT,
+    backgroundColor: Colors.SECONDARY,
   },
-  tagButton: {
+  continueButton: {
     backgroundColor: Colors.PRIMARY,
   },
   actionButtonText: {
-    color: Colors.WHITE,
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
-
-export default BuilderScreen; 

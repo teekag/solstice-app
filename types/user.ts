@@ -21,6 +21,7 @@ export interface UserProfile {
   display_name?: string;
   bio?: string;
   profile_image_url?: string;
+  interests?: string[]; // User's interests/preferences for content
   routines_created: number;
   routines_completed: number;
   created_at: Date;

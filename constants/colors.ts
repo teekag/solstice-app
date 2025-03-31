@@ -9,7 +9,8 @@ export const PRIMARY_LIGHT = '#a0b4e8';
 export const PRIMARY_DARK = '#2861e5';
 
 // Secondary colors
-export const ACCENT = '#ff9a5b';  // Orange accent color
+export const SECONDARY = '#ff9a5b';  // Orange accent color (renamed from ACCENT)
+export const ACCENT = '#ff9a5b';  // Orange accent color (keeping for backward compatibility)
 export const ACCENT_LIGHT = '#ffb98b';
 export const ACCENT_DARK = '#e87e3e';
 
@@ -17,10 +18,17 @@ export const ACCENT_DARK = '#e87e3e';
 export const WHITE = '#ffffff';
 export const BACKGROUND_LIGHT = '#f8f9fa';
 export const BORDER = '#eaeaea';
+export const BORDER_LIGHT = '#f0f0f0';
+export const BORDER_MEDIUM = '#e0e0e0';
 export const GRAY_LIGHT = '#f0f0f0';
 export const GRAY = '#999999';
 export const GRAY_DARK = '#666666';
 export const BLACK = '#333333';
+
+// Text colors
+export const TEXT_DARK = '#333333';
+export const TEXT_MEDIUM = '#666666';
+export const TEXT_LIGHT = '#999999';
 
 // Semantic colors
 export const SUCCESS = '#4caf50';
@@ -43,4 +51,4 @@ export const CARD_TYPE_COLORS = {
   video: '#4a80f5',       // Blue
   article: '#8c6bc8',     // Purple
   custom: '#63c7b2',      // Teal
-}; 
+};
