@@ -41,10 +41,9 @@ app.add_middleware(
 )
 
 # Environment variables
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-USE_OPENROUTER = os.getenv("USE_OPENROUTER", "false").lower() == "true"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
 # Models
 class UrlRequest(BaseModel):
@@ -111,37 +110,26 @@ async def get_user_from_token(authorization: str = Header(None)) -> str:
     return authorization.replace("Bearer ", "")
 
 async def call_llm(prompt: str) -> str:
-    """Call LLM using either Ollama or OpenRouter"""
+    """Call LLM using OpenRouter"""
     try:
-        if USE_OPENROUTER and OPENROUTER_API_KEY:
-            # Use OpenRouter as fallback
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": "mistralai/mistral-7b-instruct",
-                        "messages": [{"role": "user", "content": prompt}],
-                    },
-                )
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
-        else:
-            # Use Ollama (default)
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{OLLAMA_HOST}/api/generate",
-                    json={
-                        "model": OLLAMA_MODEL,
-                        "prompt": prompt,
-                        "stream": False,
-                    },
-                )
-                result = response.json()
-                return result["response"]
+        if not OPENROUTER_API_KEY:
+            logger.error("OpenRouter API key is missing")
+            raise HTTPException(status_code=500, detail="OpenRouter API key is missing")
+            
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "mistralai/mistral-7b-instruct",
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
     except Exception as e:
         logger.error(f"Error calling LLM: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error calling LLM: {str(e)}")

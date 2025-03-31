@@ -11,7 +11,7 @@ A FastAPI-based backend service that powers AI features for the Solstice wellnes
 ## Tech Stack
 
 - **FastAPI**: Modern, high-performance web framework
-- **Ollama**: Local LLM inference using Mistral 7B
+- **OpenRouter**: API access to powerful LLMs like Mistral 7B
 - **Pydantic**: Data validation and settings management
 - **HTTPX**: Asynchronous HTTP client
 - **Uvicorn**: ASGI server
@@ -25,25 +25,14 @@ A FastAPI-based backend service that powers AI features for the Solstice wellnes
    pip install -r requirements.txt
    ```
 
-2. Install Ollama:
-   ```bash
-   curl -fsSL https://ollama.com/install.sh | sh
+2. Create a `.env` file:
+   ```
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_service_role_key
    ```
 
-3. Pull the Mistral model:
-   ```bash
-   ollama pull mistral
-   ```
-
-4. Create a `.env` file:
-   ```
-   OLLAMA_HOST=http://localhost:11434
-   OLLAMA_MODEL=mistral
-   USE_OPENROUTER=false
-   OPENROUTER_API_KEY=  # Optional fallback
-   ```
-
-5. Run the server:
+3. Run the server:
    ```bash
    uvicorn main:app --reload
    ```
@@ -67,7 +56,10 @@ A FastAPI-based backend service that powers AI features for the Solstice wellnes
 3. Set the following:
    - Build Command: `pip install -r requirements.txt`
    - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables as specified in the `.env` file
+4. Add environment variables:
+   - `OPENROUTER_API_KEY`: Your OpenRouter API key
+   - `SUPABASE_URL`: Your Supabase project URL
+   - `SUPABASE_KEY`: Your Supabase service role key
 
 ## API Endpoints
 
