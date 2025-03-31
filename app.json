@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SolsticeApp",
-    "slug": "SolsticeApp",
+    "name": "Solstice",
+    "slug": "solstice-wellness",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,17 +12,45 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.solstice.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.solstice.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Solstice to access your photos to upload content.",
+          "cameraPermission": "Allow Solstice to access your camera to capture content."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      },
+      "SUPABASE_URL": "https://ogzmogthgwtckxtwucst.supabase.co",
+      "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nem1vZ3RoZ3d0Y2t4dHd1Y3N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NjQxMDQsImV4cCI6MjA1ODQ0MDEwNH0.uiiZtIqXhF2ws_z9U647jwVO2newwVaMoieRYYvuCLw"
     }
   }
 }
